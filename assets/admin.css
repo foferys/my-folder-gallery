@@ -1,0 +1,108 @@
+.pwg-admin-box {
+  max-width: 980px;
+}
+
+.pwg-media-list {
+  margin: 12px 0 0;
+}
+
+.pwg-media-toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.pwg-media-toolbar p {
+  margin: 0;
+}
+
+.pwg-select-all-delete {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+}
+
+.pwg-media-item {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #dcdcde;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 28px 72px minmax(160px, 1fr) auto auto;
+  margin: 0 0 8px;
+  padding: 8px 12px;
+}
+
+.pwg-media-handle {
+  color: #646970;
+  cursor: move;
+}
+
+.pwg-media-preview {
+  align-items: center;
+  background: #f6f7f7;
+  display: flex;
+  height: 54px;
+  justify-content: center;
+  overflow: hidden;
+  width: 72px;
+}
+
+.pwg-media-preview img {
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.pwg-media-name {
+  font-family: monospace;
+  overflow-wrap: anywhere;
+}
+
+.pwg-media-cover,
+.pwg-media-delete {
+  white-space: nowrap;
+}
+
+.pwg-shortcode-copy {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.pwg-shortcode-copy code {
+  font-size: 15px;
+  padding: 6px 10px;
+}
+
+.pwg-copy-feedback {
+  color: #008a20;
+  min-height: 20px;
+}
+
+.pwg-shortcode-help {
+  background: #f6f7f7;
+  border-left: 4px solid #72aee6;
+  margin-top: 12px;
+  max-width: 760px;
+  padding: 10px 14px;
+}
+
+.pwg-shortcode-help p {
+  margin: 6px 0;
+}
+
+@media (max-width: 782px) {
+  .pwg-media-item {
+    grid-template-columns: 28px 72px 1fr;
+  }
+
+  .pwg-media-cover,
+  .pwg-media-delete {
+    grid-column: 3;
+  }
+}
