@@ -2,7 +2,7 @@
 /**
  * Plugin Name: my-folder-gallery
  * Description: Gestisce progetti portfolio con upload in cartelle dedicate e shortcode frontend.
- * Version: 0.2.7
+ * Version: 0.2.8
  * Author: Sportime
  * Text Domain: my-folder-gallery
  */
@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'PWG_VERSION', '0.2.7' );
+define( 'PWG_VERSION', '0.2.8' );
 define( 'PWG_PLUGIN_FILE', __FILE__ );
 define( 'PWG_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'PWG_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -19,6 +19,7 @@ define( 'PWG_POST_TYPE', 'pwg_work' );
 define( 'PWG_OPTION_BASE_SUBDIR', 'pwg_base_subdir' );
 define( 'PWG_OPTION_GALLERY_TITLE', 'pwg_gallery_title' );
 define( 'PWG_OPTION_ACCENT_COLOR', 'pwg_accent_color' );
+define( 'PWG_OPTION_CARD_CORNERS', 'pwg_card_corners' );
 define( 'PWG_SHORTCODE', 'my_folder-gallery' );
 define( 'PWG_SHORTCODE_PRETTY', 'my_folder–gallery' );
 
@@ -101,6 +102,16 @@ function pwg_register_settings(): void {
 			'default'           => '#fbed51',
 		)
 	);
+
+	register_setting(
+		'pwg_settings',
+		PWG_OPTION_CARD_CORNERS,
+		array(
+			'type'              => 'string',
+			'sanitize_callback' => 'pwg_sanitize_card_corners',
+			'default'           => 'square',
+		)
+	);
 }
 
 
@@ -165,6 +176,37 @@ function pwg_render_settings_page(): void {
 						</p>
 					</td>
 				</tr>
+				<tr>
+					<th scope="row">
+						<?php echo esc_html__( 'Bordi progetti', 'my-folder-gallery' ); ?>
+					</th>
+					<td>
+						<fieldset>
+							<label>
+								<input
+									name="<?php echo esc_attr( PWG_OPTION_CARD_CORNERS ); ?>"
+									type="radio"
+									value="square"
+									<?php checked( pwg_get_card_corners(), 'square' ); ?>
+								>
+								<?php echo esc_html__( 'Quadrati', 'my-folder-gallery' ); ?>
+							</label>
+							<br>
+							<label>
+								<input
+									name="<?php echo esc_attr( PWG_OPTION_CARD_CORNERS ); ?>"
+									type="radio"
+									value="rounded"
+									<?php checked( pwg_get_card_corners(), 'rounded' ); ?>
+								>
+								<?php echo esc_html__( 'Tondi', 'my-folder-gallery' ); ?>
+							</label>
+						</fieldset>
+						<p class="description">
+							<?php echo esc_html__( 'Scegli la forma dei singoli progetti nella vista con tutti i lavori.', 'my-folder-gallery' ); ?>
+						</p>
+					</td>
+				</tr>
 			</table>
 
 			<?php submit_button(); ?>
@@ -223,6 +265,13 @@ function pwg_get_gallery_title(): string {
 	return pwg_sanitize_gallery_title( (string) get_option( PWG_OPTION_GALLERY_TITLE, 'SELECTED WORKS' ) );
 }
 
+function pwg_get_project_title( int $post_id ): string {
+	$title = (string) get_post_field( 'post_title', $post_id, 'raw' );
+	$title = html_entity_decode( wp_specialchars_decode( $title, ENT_QUOTES ), ENT_QUOTES | ENT_HTML5, get_bloginfo( 'charset' ) ?: 'UTF-8' );
+
+	return sanitize_text_field( $title );
+}
+
 function pwg_sanitize_accent_color( string $value ): string {
 	$value = trim( wp_unslash( $value ) );
 
@@ -237,6 +286,20 @@ function pwg_get_accent_color(): string {
 	return pwg_sanitize_accent_color( (string) get_option( PWG_OPTION_ACCENT_COLOR, '#fbed51' ) );
 }
 
+function pwg_sanitize_card_corners( string $value ): string {
+	$value = sanitize_key( wp_unslash( $value ) );
+
+	return in_array( $value, array( 'square', 'rounded' ), true ) ? $value : 'square';
+}
+
+function pwg_get_card_corners(): string {
+	return pwg_sanitize_card_corners( (string) get_option( PWG_OPTION_CARD_CORNERS, 'square' ) );
+}
+
+function pwg_get_card_border_radius( string $corners ): string {
+	return 'rounded' === pwg_sanitize_card_corners( $corners ) ? '28px' : '0';
+}
+
 function pwg_hex_to_rgb( string $hex ): array {
 	$hex = ltrim( pwg_sanitize_accent_color( $hex ), '#' );
 
@@ -247,20 +310,22 @@ function pwg_hex_to_rgb( string $hex ): array {
 	);
 }
 
-function pwg_render_accent_style( string $instance_id, string $accent_color ): string {
+function pwg_render_accent_style( string $instance_id, string $accent_color, string $card_corners ): string {
 	list( $red, $green, $blue ) = pwg_hex_to_rgb( $accent_color );
 	$selector = '#' . sanitize_html_class( $instance_id );
 	$soft     = sprintf( 'rgba(%d, %d, %d, 0.24)', $red, $green, $blue );
 	$nav      = sprintf( 'rgba(%d, %d, %d, 0.9)', $red, $green, $blue );
 	$contrast = ( ( $red * 299 + $green * 587 + $blue * 114 ) / 1000 ) > 150 ? '#050505' : '#ffffff';
+	$radius   = pwg_get_card_border_radius( $card_corners );
 
 	return sprintf(
-		'<style>%1$s .pwg-modal,%1$s .works-modal{--works-pink:%2$s;}%1$s .works-modal .modal-content{background:radial-gradient(circle at top left,%3$s,transparent 30%%),linear-gradient(135deg,rgba(5,5,5,.98),rgba(25,25,25,.95));}%1$s .works-modal-nav{background:%4$s;color:%5$s;}%1$s .works-modal-close:hover,%1$s .works-modal-close:focus{background:%2$s;border-color:%2$s;color:%5$s;}%1$s .works-modal-dots button.is-active{background:%2$s;}</style>',
+		'<style>%1$s .pwg-modal,%1$s .works-modal{--works-pink:%2$s;}%1$s .pwg-card,%1$s .works-card{border-radius:%6$s;}%1$s .works-modal .modal-content{background:radial-gradient(circle at top left,%3$s,transparent 30%%),linear-gradient(135deg,rgba(5,5,5,.98),rgba(25,25,25,.95));}%1$s .works-modal-nav{background:%4$s;color:%5$s;}%1$s .works-modal-close:hover,%1$s .works-modal-close:focus{background:%2$s;border-color:%2$s;color:%5$s;}%1$s .works-modal-dots button.is-active{background:%2$s;}</style>',
 		esc_attr( $selector ),
 		esc_html( $accent_color ),
 		esc_html( $soft ),
 		esc_html( $nav ),
-		esc_html( $contrast )
+		esc_html( $contrast ),
+		esc_html( $radius )
 	);
 }
 
@@ -804,11 +869,12 @@ function pwg_render_shortcode( array $atts = array() ): string {
 
 	$instance_id  = 'pwg-gallery-' . wp_unique_id();
 	$accent_color = pwg_get_accent_color();
+	$card_corners = pwg_get_card_corners();
 
 	ob_start();
 	?>
 	<div class="pwg-gallery mx-5 my-5 py-5" id="<?php echo esc_attr( $instance_id ); ?>">
-		<?php echo pwg_render_accent_style( $instance_id, $accent_color ); ?>
+		<?php echo pwg_render_accent_style( $instance_id, $accent_color, $card_corners ); ?>
 		<?php if ( '' !== $gallery_title ) : ?>
 			<div class="selWorks pwg-heading">
 				<h1 class="text-center py-5"><?php echo esc_html( $gallery_title ); ?></h1>
@@ -888,27 +954,27 @@ function pwg_prepare_work_data( int $post_id ): ?array {
 
 	$paths = pwg_get_project_paths( $post_id );
 	$media = array();
+	$title = pwg_get_project_title( $post_id );
 
 	foreach ( $files as $filename ) {
 		$extension = strtolower( pathinfo( $filename, PATHINFO_EXTENSION ) );
 		$media[] = array(
 			'url'  => trailingslashit( $paths['url'] ) . rawurlencode( $filename ),
 			'type' => 'mp4' === $extension ? 'video' : 'image',
-			'alt'  => get_the_title( $post_id ),
+			'alt'  => $title,
 		);
 	}
 
 	$cover_filename = (string) get_post_meta( $post_id, '_pwg_cover', true );
 	$cover_index    = array_search( $cover_filename, $files, true );
 	$cover          = false === $cover_index ? $media[0] : $media[ $cover_index ];
-	$title          = get_the_title( $post_id );
 
 	return array(
 		'id'          => $post_id,
 		'cover'       => $cover,
 		'media'       => $media,
 		'title'       => $title,
-		'title_parts' => array_map( 'trim', explode( '-', $title ) ),
+		'title_parts' => array_map( 'trim', preg_split( '/\s*(?:-|\x{2013}|\x{2014})\s*/u', $title ) ),
 	);
 }
 
