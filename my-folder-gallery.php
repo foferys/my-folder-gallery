@@ -2,8 +2,8 @@
 /**
  * Plugin Name: my-folder-gallery
  * Description: Gestisce progetti portfolio con upload in cartelle dedicate e shortcode frontend.
- * Version: 0.2.4
- * Author: Primacom
+ * Version: 0.2.7
+ * Author: Sportime
  * Text Domain: my-folder-gallery
  */
 
@@ -11,13 +11,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'PWG_VERSION', '0.2.4' );
+define( 'PWG_VERSION', '0.2.7' );
 define( 'PWG_PLUGIN_FILE', __FILE__ );
 define( 'PWG_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'PWG_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'PWG_POST_TYPE', 'pwg_work' );
 define( 'PWG_OPTION_BASE_SUBDIR', 'pwg_base_subdir' );
 define( 'PWG_OPTION_GALLERY_TITLE', 'pwg_gallery_title' );
+define( 'PWG_OPTION_ACCENT_COLOR', 'pwg_accent_color' );
 define( 'PWG_SHORTCODE', 'my_folder-gallery' );
 define( 'PWG_SHORTCODE_PRETTY', 'my_folder–gallery' );
 
@@ -77,7 +78,7 @@ function pwg_register_settings(): void {
 		array(
 			'type'              => 'string',
 			'sanitize_callback' => 'pwg_sanitize_base_subdir',
-			'default'           => 'primacom-lavori',
+			'default'           => 'sportime-lavori',
 		)
 	);
 
@@ -90,7 +91,18 @@ function pwg_register_settings(): void {
 			'default'           => 'SELECTED WORKS',
 		)
 	);
+
+	register_setting(
+		'pwg_settings',
+		PWG_OPTION_ACCENT_COLOR,
+		array(
+			'type'              => 'string',
+			'sanitize_callback' => 'pwg_sanitize_accent_color',
+			'default'           => '#fbed51',
+		)
+	);
 }
+
 
 function pwg_render_settings_page(): void {
 	if ( ! current_user_can( 'manage_options' ) ) {
@@ -115,7 +127,7 @@ function pwg_render_settings_page(): void {
 							value="<?php echo esc_attr( pwg_get_base_subdir() ); ?>"
 						>
 						<p class="description">
-							<?php echo esc_html__( 'Esempio: primacom-lavori. Ogni progetto avra una sottocartella dedicata.', 'my-folder-gallery' ); ?>
+							<?php echo esc_html__( 'Esempio: sportime-lavori. Ogni progetto avra una sottocartella dedicata.', 'my-folder-gallery' ); ?>
 						</p>
 					</td>
 				</tr>
@@ -137,7 +149,24 @@ function pwg_render_settings_page(): void {
 						</p>
 					</td>
 				</tr>
+				<tr>
+					<th scope="row">
+						<label for="<?php echo esc_attr( PWG_OPTION_ACCENT_COLOR ); ?>"><?php echo esc_html__( 'Colore pulsanti e accenti', 'my-folder-gallery' ); ?></label>
+					</th>
+					<td>
+						<input
+							name="<?php echo esc_attr( PWG_OPTION_ACCENT_COLOR ); ?>"
+							id="<?php echo esc_attr( PWG_OPTION_ACCENT_COLOR ); ?>"
+							type="color"
+							value="<?php echo esc_attr( pwg_get_accent_color() ); ?>"
+						>
+						<p class="description">
+							<?php echo esc_html__( 'Questo colore viene usato per frecce, pulsanti, pallini e accenti della modale gallery.', 'my-folder-gallery' ); ?>
+						</p>
+					</td>
+				</tr>
 			</table>
+
 			<?php submit_button(); ?>
 		</form>
 		<hr>
@@ -179,11 +208,11 @@ function pwg_sanitize_base_subdir( string $value ): string {
 	$value = trim( $value, "/\\ \t\n\r\0\x0B" );
 	$parts = array_filter( array_map( 'sanitize_title', preg_split( '#[\/\\\\]+#', $value ) ) );
 
-	return $parts ? implode( '/', $parts ) : 'primacom-lavori';
+	return $parts ? implode( '/', $parts ) : 'sportime-lavori';
 }
 
 function pwg_get_base_subdir(): string {
-	return pwg_sanitize_base_subdir( (string) get_option( PWG_OPTION_BASE_SUBDIR, 'primacom-lavori' ) );
+	return pwg_sanitize_base_subdir( (string) get_option( PWG_OPTION_BASE_SUBDIR, 'sportime-lavori' ) );
 }
 
 function pwg_sanitize_gallery_title( string $value ): string {
@@ -192,6 +221,47 @@ function pwg_sanitize_gallery_title( string $value ): string {
 
 function pwg_get_gallery_title(): string {
 	return pwg_sanitize_gallery_title( (string) get_option( PWG_OPTION_GALLERY_TITLE, 'SELECTED WORKS' ) );
+}
+
+function pwg_sanitize_accent_color( string $value ): string {
+	$value = trim( wp_unslash( $value ) );
+
+	if ( preg_match( '/^#[0-9a-fA-F]{6}$/', $value ) ) {
+		return strtolower( $value );
+	}
+
+	return '#fbed51';
+}
+
+function pwg_get_accent_color(): string {
+	return pwg_sanitize_accent_color( (string) get_option( PWG_OPTION_ACCENT_COLOR, '#fbed51' ) );
+}
+
+function pwg_hex_to_rgb( string $hex ): array {
+	$hex = ltrim( pwg_sanitize_accent_color( $hex ), '#' );
+
+	return array(
+		hexdec( substr( $hex, 0, 2 ) ),
+		hexdec( substr( $hex, 2, 2 ) ),
+		hexdec( substr( $hex, 4, 2 ) ),
+	);
+}
+
+function pwg_render_accent_style( string $instance_id, string $accent_color ): string {
+	list( $red, $green, $blue ) = pwg_hex_to_rgb( $accent_color );
+	$selector = '#' . sanitize_html_class( $instance_id );
+	$soft     = sprintf( 'rgba(%d, %d, %d, 0.24)', $red, $green, $blue );
+	$nav      = sprintf( 'rgba(%d, %d, %d, 0.9)', $red, $green, $blue );
+	$contrast = ( ( $red * 299 + $green * 587 + $blue * 114 ) / 1000 ) > 150 ? '#050505' : '#ffffff';
+
+	return sprintf(
+		'<style>%1$s .pwg-modal,%1$s .works-modal{--works-pink:%2$s;}%1$s .works-modal .modal-content{background:radial-gradient(circle at top left,%3$s,transparent 30%%),linear-gradient(135deg,rgba(5,5,5,.98),rgba(25,25,25,.95));}%1$s .works-modal-nav{background:%4$s;color:%5$s;}%1$s .works-modal-close:hover,%1$s .works-modal-close:focus{background:%2$s;border-color:%2$s;color:%5$s;}%1$s .works-modal-dots button.is-active{background:%2$s;}</style>',
+		esc_attr( $selector ),
+		esc_html( $accent_color ),
+		esc_html( $soft ),
+		esc_html( $nav ),
+		esc_html( $contrast )
+	);
 }
 
 function pwg_get_base_paths(): array {
@@ -689,7 +759,6 @@ function pwg_filter_upload_dir( array $dirs ): array {
 
 add_shortcode( PWG_SHORTCODE, 'pwg_render_shortcode' );
 add_shortcode( PWG_SHORTCODE_PRETTY, 'pwg_render_shortcode' );
-add_shortcode( 'primacom_lavori', 'pwg_render_shortcode' );
 function pwg_render_shortcode( array $atts = array() ): string {
 	$atts = shortcode_atts(
 		array(
@@ -733,11 +802,13 @@ function pwg_render_shortcode( array $atts = array() ): string {
 
 	pwg_enqueue_frontend_assets();
 
-	$instance_id = 'pwg-gallery-' . wp_unique_id();
+	$instance_id  = 'pwg-gallery-' . wp_unique_id();
+	$accent_color = pwg_get_accent_color();
 
 	ob_start();
 	?>
 	<div class="pwg-gallery mx-5 my-5 py-5" id="<?php echo esc_attr( $instance_id ); ?>">
+		<?php echo pwg_render_accent_style( $instance_id, $accent_color ); ?>
 		<?php if ( '' !== $gallery_title ) : ?>
 			<div class="selWorks pwg-heading">
 				<h1 class="text-center py-5"><?php echo esc_html( $gallery_title ); ?></h1>
