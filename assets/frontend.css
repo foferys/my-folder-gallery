@@ -239,6 +239,7 @@ video.works-modal-media {
   font-size: 16px;
   line-height: 1.4;
   margin: 0;
+  white-space: pre-line;
 }
 
 .works-modal-dots {

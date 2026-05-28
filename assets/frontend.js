@@ -68,7 +68,7 @@
       const hasMultipleMedia = work.media.length > 1;
 
       modalTitle.textContent = work.title;
-      modalCaption.textContent = work.title;
+      modalCaption.textContent = work.description || work.title;
       modalCounter.textContent = `${activeMediaIndex + 1} / ${work.media.length}`;
       modalMedia.replaceChildren();
       modalDots.replaceChildren();

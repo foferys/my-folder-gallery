@@ -2,7 +2,7 @@
 /**
  * Plugin Name: my-folder-gallery
  * Description: Gestisce progetti portfolio con upload in cartelle dedicate e shortcode frontend.
- * Version: 0.2.8
+ * Version: 0.2.9
  * Author: Sportime
  * Text Domain: my-folder-gallery
  */
@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'PWG_VERSION', '0.2.8' );
+define( 'PWG_VERSION', '0.2.9' );
 define( 'PWG_PLUGIN_FILE', __FILE__ );
 define( 'PWG_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'PWG_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -272,6 +272,14 @@ function pwg_get_project_title( int $post_id ): string {
 	return sanitize_text_field( $title );
 }
 
+function pwg_sanitize_project_description( string $value ): string {
+	return sanitize_textarea_field( wp_unslash( $value ) );
+}
+
+function pwg_get_project_description( int $post_id ): string {
+	return pwg_sanitize_project_description( (string) get_post_meta( $post_id, '_pwg_description', true ) );
+}
+
 function pwg_sanitize_accent_color( string $value ): string {
 	$value = trim( wp_unslash( $value ) );
 
@@ -468,6 +476,7 @@ function pwg_render_project_meta_box( WP_Post $post ): void {
 	$folder      = $paths['folder'];
 	$files       = pwg_get_project_files( $post->ID );
 	$cover       = (string) get_post_meta( $post->ID, '_pwg_cover', true );
+	$description = pwg_get_project_description( $post->ID );
 	$folder_path = $paths['dir'];
 	?>
 	<div class="pwg-admin-box">
@@ -483,6 +492,16 @@ function pwg_render_project_meta_box( WP_Post $post ): void {
 				esc_html( $folder_path )
 			);
 			?>
+		</p>
+
+		<hr>
+
+		<p>
+			<label for="pwg_description"><strong><?php echo esc_html__( 'Descrizione nella modale', 'my-folder-gallery' ); ?></strong></label>
+		</p>
+		<textarea id="pwg_description" name="pwg_description" class="large-text" rows="4"><?php echo esc_textarea( $description ); ?></textarea>
+		<p class="description">
+			<?php echo esc_html__( 'Questo testo appare sotto foto e video quando si apre il progetto. Se lo lasci vuoto viene mostrato il titolo.', 'my-folder-gallery' ); ?>
 		</p>
 
 		<hr>
@@ -579,6 +598,13 @@ function pwg_save_project_media( int $post_id, WP_Post $post ): void {
 
 	pwg_maybe_rename_project_folder( $old_folder, $folder );
 	update_post_meta( $post_id, '_pwg_folder', $folder );
+
+	$description = isset( $_POST['pwg_description'] ) ? pwg_sanitize_project_description( (string) $_POST['pwg_description'] ) : '';
+	if ( '' !== $description ) {
+		update_post_meta( $post_id, '_pwg_description', $description );
+	} else {
+		delete_post_meta( $post_id, '_pwg_description' );
+	}
 
 	pwg_ensure_base_dir();
 	$paths = pwg_get_project_paths( $post_id );
@@ -955,6 +981,7 @@ function pwg_prepare_work_data( int $post_id ): ?array {
 	$paths = pwg_get_project_paths( $post_id );
 	$media = array();
 	$title = pwg_get_project_title( $post_id );
+	$description = pwg_get_project_description( $post_id );
 
 	foreach ( $files as $filename ) {
 		$extension = strtolower( pathinfo( $filename, PATHINFO_EXTENSION ) );
@@ -974,6 +1001,7 @@ function pwg_prepare_work_data( int $post_id ): ?array {
 		'cover'       => $cover,
 		'media'       => $media,
 		'title'       => $title,
+		'description' => $description,
 		'title_parts' => array_map( 'trim', preg_split( '/\s*(?:-|\x{2013}|\x{2014})\s*/u', $title ) ),
 	);
 }
